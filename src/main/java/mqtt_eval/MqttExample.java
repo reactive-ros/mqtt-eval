@@ -10,12 +10,18 @@ public class MqttExample implements MqttCallback {
 
     public void doDemo(MqttClient client) {
         try {
-            client.connect();
+            String topic = "MQTT Examples";
+            String content = "Message from MqttPublishSample";
+            int qos = 2;
+
+            MqttConnectOptions connOpts = new MqttConnectOptions();
+            connOpts.setCleanSession(true);
+            client.connect(connOpts);
             client.setCallback(this);
-            client.subscribe("foo");
-            MqttMessage message = new MqttMessage();
-            message.setPayload("A single message from my computer fff".getBytes());
-            client.publish("foo", message);
+            client.subscribe(topic);
+            MqttMessage message = new MqttMessage(content.getBytes());
+            message.setQos(qos);
+            client.publish(topic, message);
         } catch (MqttException e) {
             e.printStackTrace();
         }

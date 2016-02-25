@@ -1,6 +1,6 @@
 package mqtt_eval.mqqt_graph;
 
-import mqtt_eval.Topic;
+import mqtt_eval.MqttTopic;
 import org.jgrapht.graph.DirectedPseudograph;
 import org.reactive_ros.internal.expressions.NoInputExpr;
 import org.reactive_ros.internal.expressions.Transformer;
@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 public class MqttGraph extends DirectedPseudograph<MqttNode, MqttEdge> {
     public Transformer toConnect;
 
-    public MqttGraph(FlowGraph graph, Func0<Topic> topicGenerator) {
+    public MqttGraph(FlowGraph graph, Func0<MqttTopic> topicGenerator) {
         super(MqttEdge.class);
         // Copy FlowGraph
         toConnect = graph.getConnectNode();

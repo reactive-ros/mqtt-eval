@@ -26,6 +26,9 @@ dependencies {
 
 	// paho
 	compile 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.0.2'
+
+    // Distribution
+    compile 'com.github.reactive-ros:remote-execution:-SNAPSHOT'
 	
 	// Testing
 	testCompile 'junit:junit:4.11'

@@ -1,6 +1,6 @@
 package mqtt_eval.mqqt_graph;
 
-import mqtt_eval.Topic;
+import mqtt_eval.MqttTopic;
 import org.jgrapht.graph.DefaultEdge;
 
 /**
@@ -9,15 +9,15 @@ import org.jgrapht.graph.DefaultEdge;
 public class MqttEdge extends DefaultEdge {
     private MqttNode source;
     private MqttNode target;
-    private Topic topic;
+    private MqttTopic topic;
 
-    public MqttEdge(MqttNode v1, MqttNode v2, Topic topic) {
+    public MqttEdge(MqttNode v1, MqttNode v2, MqttTopic topic) {
         this.source = v1;
         this.target = v2;
         this.topic = topic;
     }
 
-    public Topic getTopic() {
+    public MqttTopic getTopic() {
         return topic;
     }
 
@@ -45,6 +45,6 @@ public class MqttEdge extends DefaultEdge {
 
     @Override
     public String toString() {
-        return topic.name;
+        return topic.getName();
     }
 }

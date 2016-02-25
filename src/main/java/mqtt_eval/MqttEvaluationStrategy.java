@@ -16,10 +16,10 @@ import org.reactive_ros.internal.output.MultipleOutput;
 import org.reactive_ros.internal.output.Output;
 import org.reactive_ros.internal.output.SinkOutput;
 import org.reactive_ros.util.functions.Func0;
+import remote_execution.RemoteExecution;
+import remote_execution.StreamTask;
 
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
  */
 public class MqttEvaluationStrategy implements EvaluationStrategy {
 
+    final RemoteExecution executor = new RemoteExecution();
     Func0<EvaluationStrategy> evaluationStrategy;
 
     String nodePrefix = "~";
@@ -52,33 +53,31 @@ public class MqttEvaluationStrategy implements EvaluationStrategy {
         return nodePrefix + "_" + Integer.toString(nodeCounter++);
     }
 
-    public Topic newTopic() {
-        return new Topic(nodePrefix + "/" + Integer.toString(topicCounter++));
+    public MqttTopic newTopic() {
+        return new MqttTopic(nodePrefix + "/" + Integer.toString(topicCounter++));
     }
 
     /**
      * Evaluation
      */
 
-    final ExecutorService exec = Executors.newFixedThreadPool(4);
-
-    private void execute(Stream stream, Output output) {
-        // TODO Network layout
+    private void execute(Queue<StreamTask> tasks) {
         String nodeName = newName();
-        Runnable node = new MqttRunnable(nodeName, stream, output, evaluationStrategy.call());
-        exec.execute(node);
+        executor.submit(tasks);
     }
 
     @Override
     public <T> void evaluate(Stream<T> stream, Output output) {
         FlowGraph flow = stream.getGraph();
         MqttGraph graph = new MqttGraph(flow, this::newTopic);
+        Queue<StreamTask> tasks = new LinkedList<>();
 
         // Run output node first
-        Topic result = newTopic();
+        MqttTopic result = newTopic();
         FlowGraph resultNode = new FlowGraph();
         resultNode.addConnectVertex(Stream.from(result).getToConnect());
-        execute(new Stream(resultNode), output);
+
+        tasks.add(new StreamTask(evaluationStrategy, new Stream(resultNode), output, Collections.singletonList("Mqtt")));
 
         // Then run each graph vertex as an individual node (reverse BFS)
         Set<MqttNode> checked = new HashSet<>();
@@ -100,7 +99,7 @@ public class MqttEvaluationStrategy implements EvaluationStrategy {
             } else if (transformer instanceof SingleInputExpr) {
                 assert inputs.size() == 1;
                 // 1 input
-                Topic input = inputs.iterator().next().getTopic();
+                MqttTopic input = inputs.iterator().next().getTopic();
                 Transformer toAdd = new FromSource<>(input.clone());
                 innerGraph.addConnectVertex(toAdd);
                 innerGraph.attach(transformer);
@@ -120,14 +119,17 @@ public class MqttEvaluationStrategy implements EvaluationStrategy {
                 list.add(new SinkOutput<>(result.clone()));
             list.addAll(outputs.stream()
                     .map(MqttEdge::getTopic)
-                    .map((Function<Topic, SinkOutput>) SinkOutput::new)
+                    .map((Function<MqttTopic, SinkOutput>) SinkOutput::new)
                     .collect(Collectors.toList()));
             Output outputToExecute = (list.size() == 1) ? list.get(0) : new MultipleOutput(list);
 
-            // Execute
-            execute(new Stream(innerGraph, innerGraph.getConnectNode()), outputToExecute);
+            // Schedule for execution
+            tasks.add(new StreamTask(evaluationStrategy, new Stream(innerGraph), outputToExecute, Collections.singletonList("Mqtt")));
 
             checked.add(toExecute);
         }
+
+        // Submit the tasks for execution
+        execute(tasks);
     }
 }

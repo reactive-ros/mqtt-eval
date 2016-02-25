@@ -8,6 +8,7 @@ import org.reactive_ros.internal.expressions.creation.FromSource;
 import org.reactive_ros.internal.output.MultipleOutput;
 import org.reactive_ros.internal.output.Output;
 import org.reactive_ros.internal.output.SinkOutput;
+import org.reactive_ros.io.AbstractTopic;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -38,35 +39,15 @@ public class MqttRunnable implements Runnable {
             options.setCleanSession(true);
             client.connect(options).waitForCompletion();
 
+            List<MqttTopic> topics = AbstractTopic.extract(stream, output).stream().map(t -> ((MqttTopic) t)).collect(Collectors.toList());
 
-            List<Topic> topics = stream.getGraph()
-                    .vertexSet()
-                    .stream()
-                    .filter(n -> n instanceof FromSource)
-                    .map(n -> ((FromSource) n).getSource())
-                    .filter(s -> s instanceof Topic)
-                    .map(s -> ((Topic) s))
-                    .collect(Collectors.toList());
-
-            if (output instanceof MultipleOutput) {
-                for (Output out : ((MultipleOutput) output).getOutputs())
-                    if (out instanceof SinkOutput && ((SinkOutput) out).getSink() instanceof Topic)
-                        topics.add((Topic) ((SinkOutput) out).getSink());
+            for (MqttTopic topic : topics) {
+                client.subscribe(topic.getName(), 2).waitForCompletion();
+                topic.setClient(client);
             }
-            else if (output instanceof SinkOutput && ((SinkOutput) output).getSink() instanceof Topic)
-                topics.add((Topic) ((SinkOutput) output).getSink());
-
-            topics.stream().forEach(n -> {
-                try {
-                    client.subscribe(n.name, 2).waitForCompletion();
-                } catch (MqttException e) {
-                    e.printStackTrace();
-                }
-                n.setClient(client);
-            });
 
         } catch (MqttException e) {
-            e.printStackTrace();
+            stream = Stream.error(e);
         }
 
         evaluationStrategy.evaluate(stream, output);

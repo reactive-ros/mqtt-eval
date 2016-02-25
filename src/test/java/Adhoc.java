@@ -1,6 +1,6 @@
 
 import mqtt_eval.MqttRunnable;
-import mqtt_eval.Topic;
+import mqtt_eval.MqttTopic;
 import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
@@ -27,7 +27,7 @@ public class Adhoc {
             e.printStackTrace();
         }
 
-        Topic<Integer> topic = new Topic<>("OrestisTopic");
+        MqttTopic<Integer> topic = new MqttTopic<>("OrestisTopic");
 
         Runnable r1 = new MqttRunnable(
                 "node1",

@@ -1,27 +1,24 @@
 package mqtt_eval;
 
 import org.eclipse.paho.client.mqttv3.*;
-import org.reactive_ros.evaluation.Serializer;
-import org.reactive_ros.GeneralSerializer;
-import org.reactive_ros.internal.io.Sink;
-import org.reactive_ros.internal.io.Source;
+import org.reactive_ros.evaluation.GeneralSerializer;
 import org.reactive_ros.internal.notifications.Notification;
+import org.reactive_ros.io.AbstractTopic;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-public class Topic<T> implements Source<T>, Sink<T> {
+public class MqttTopic<T> extends AbstractTopic<T, byte[]> {
     static final boolean DEBUG = false;
     static final int QOS = 2; // slowest && most reliable
-    public String name;
-    private final Serializer<byte[]> serializer = new GeneralSerializer();
     private MqttAsyncClient client;
 
-    public Topic(String name) {
+    public MqttTopic(String name) {
+        super(name, new GeneralSerializer());
         this.name = name;
     }
 
-    public void setClient(MqttAsyncClient client) {
-        this.client = client;
+    public void setClient(Object client) {
+        this.client = (MqttAsyncClient) client;
     }
 
     @Override
@@ -94,17 +91,8 @@ public class Topic<T> implements Source<T>, Sink<T> {
         }
     }
 
-    private String name() {
-        return name + "[" + Thread.currentThread().getId() + "]";
-    }
-
     @Override
-    public String toString() {
-        return name;
-    }
-
-    @Override
-    public Topic clone() {
-        return new Topic(name);
+    public MqttTopic clone() {
+        return new MqttTopic(name);
     }
 }

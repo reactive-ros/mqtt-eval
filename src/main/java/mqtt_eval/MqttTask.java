@@ -4,11 +4,10 @@ import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.reactive_ros.Stream;
 import org.reactive_ros.evaluation.EvaluationStrategy;
-import org.reactive_ros.internal.expressions.creation.FromSource;
-import org.reactive_ros.internal.output.MultipleOutput;
 import org.reactive_ros.internal.output.Output;
-import org.reactive_ros.internal.output.SinkOutput;
 import org.reactive_ros.io.AbstractTopic;
+import org.reactive_ros.util.functions.Func0;
+import remote_execution.StreamTask;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,25 +15,25 @@ import java.util.stream.Collectors;
 /**
  * @author Orestis Melkonian
  */
-public class MqttRunnable implements Runnable {
-    private static final String BROKER = "tcp://localhost:1884";
-    public String name;
-    public Stream stream;
-    public Output output;
-    public EvaluationStrategy evaluationStrategy;
+public class MqttTask extends StreamTask {
+    private String broker;
+    private String name;
 
-    public MqttRunnable(String name, Stream stream, Output output, EvaluationStrategy evaluationStrategy) {
+    public MqttTask(Func0<EvaluationStrategy> strategyGen, Stream stream, Output output, List<String> attr, String broker, String name) {
+        super(strategyGen, stream, output, attr);
+        this.broker = broker;
         this.name = name;
-        this.stream = stream;
-        this.output = output;
-        this.evaluationStrategy = evaluationStrategy;
+    }
+
+    public MqttTask(StreamTask task, String broker, String name) {
+        this(task.getStrategyGenerator(), task.getStream(), task.getOutput(), task.getRequiredAttributes(), broker, name);
     }
 
     @Override
     public void run() {
-//        display();
+//        System.out.println(this);
         try {
-            final MqttAsyncClient client = new MqttAsyncClient(BROKER, name, new MemoryPersistence());
+            final MqttAsyncClient client = new MqttAsyncClient(broker, name, new MemoryPersistence());
             MqttConnectOptions options = new MqttConnectOptions();
             options.setCleanSession(true);
             client.connect(options).waitForCompletion();
@@ -45,20 +44,19 @@ public class MqttRunnable implements Runnable {
                 client.subscribe(topic.getName(), 2).waitForCompletion();
                 topic.setClient(client);
             }
-
         } catch (MqttException e) {
             stream = Stream.error(e);
         }
 
-        evaluationStrategy.evaluate(stream, output);
+        super.run();
     }
 
-    private void display() {
-        System.out.println(
-                "\n\n======================== " + info() + " ========================"
-                        + "\n" + stream.getGraph()
-                        + "\n\t===>\t" + output + "\n"
-                        + "\n==================================================\"\n\n");
+    @Override
+    public String toString() {
+        return "\n\n======================== " + info() + " ========================"
+                + "\n" + stream.getGraph()
+                + "\n\t===>\t" + output + "\n"
+                + "\n==================================================\"\n\n";
     }
 
     private String info() {

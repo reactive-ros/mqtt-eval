@@ -16,10 +16,10 @@ targetCompatibility = 1.8
 group = "com.github.reactive-ros"
 version = 1.0
 
-// configurations.all {
-//     // check for updates every build
-//     resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
-// }
+configurations.all {
+    // check for updates every build
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+}
 dependencies {	
 	// reactive-ros
 	compile 'com.github.reactive-ros:reactive-ros:-SNAPSHOT'

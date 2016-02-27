@@ -13,7 +13,7 @@ public class Tester {
     public void mqtt_eval() {
         Stream.setEvaluationStrategy(new MqttEvaluationStrategy(() -> new RxjavaEvaluationStrategy()));
 
-        Stream.nat().printAll();
+        Stream.range(1, 100).subscribe(i -> System.out.println(i));
 
         Threads.sleep();
     }

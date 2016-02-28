@@ -16,8 +16,8 @@ import java.util.stream.Collectors;
  * @author Orestis Melkonian
  */
 public class MqttTask extends StreamTask {
-    private String broker;
-    private String name;
+    String broker;
+    String name;
 
     public MqttTask(Func0<EvaluationStrategy> strategyGen, Stream stream, Output output, List<String> attr, String broker, String name) {
         super(strategyGen, stream, output, attr);
@@ -31,7 +31,6 @@ public class MqttTask extends StreamTask {
 
     @Override
     public void run() {
-//        System.out.println(this);
         try {
             final MqttAsyncClient client = new MqttAsyncClient(broker, name, new MemoryPersistence());
             MqttConnectOptions options = new MqttConnectOptions();
@@ -49,18 +48,5 @@ public class MqttTask extends StreamTask {
         }
 
         super.run();
-    }
-
-    @Override
-    public String toString() {
-        return "\n\n======================== " + info() + " ========================"
-                + "\n" + stream.getGraph()
-                + "\n\t===>\t" + output + "\n"
-                + "\n==================================================\"\n\n";
-    }
-
-    private String info() {
-        return name + " [" + Thread.currentThread().getId() + "]";
-//        return ManagementFactory.getRuntimeMXBean().getName() + "@" + processInfo() + ": ";
     }
 }

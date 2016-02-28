@@ -16,10 +16,10 @@ import org.reactive_ros.internal.output.MultipleOutput;
 import org.reactive_ros.internal.output.Output;
 import org.reactive_ros.internal.output.SinkOutput;
 import org.reactive_ros.util.functions.Func0;
+import remote_execution.Broker;
 import remote_execution.RemoteExecution;
 import remote_execution.StreamTask;
 
-import java.io.*;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -30,12 +30,9 @@ import java.util.stream.Collectors;
  */
 public class MqttEvaluationStrategy implements EvaluationStrategy {
 
-    final RemoteExecution executor = new RemoteExecution();
+    final RemoteExecution executor = new RemoteExecution(); // TODO add machines
     Func0<EvaluationStrategy> evaluationStrategy;
-    String broker = "tcp://localhost:1884";
-
-    String nodePrefix = "~";
-    int topicCounter = 0, nodeCounter = 0;
+    Broker broker = new Broker("m2m.eclipse.org", 1883); // default public broker from Eclipse
 
     /**
      * Constructors
@@ -44,12 +41,12 @@ public class MqttEvaluationStrategy implements EvaluationStrategy {
         this.evaluationStrategy = evaluationStrategy;
     }
 
-    public MqttEvaluationStrategy(Func0<EvaluationStrategy> evaluationStrategy, String broker) {
+    public MqttEvaluationStrategy(Func0<EvaluationStrategy> evaluationStrategy, Broker broker) {
         this.evaluationStrategy = evaluationStrategy;
         this.broker = broker;
     }
 
-    public MqttEvaluationStrategy(Func0<EvaluationStrategy> evaluationStrategy, String broker, String nodePrefix) {
+    public MqttEvaluationStrategy(Func0<EvaluationStrategy> evaluationStrategy, Broker broker, String nodePrefix) {
         this(evaluationStrategy, broker);
         this.nodePrefix = nodePrefix;
     }
@@ -57,6 +54,8 @@ public class MqttEvaluationStrategy implements EvaluationStrategy {
     /**
      * Generators
      */
+    String nodePrefix = "~";
+    int topicCounter = 0, nodeCounter = 0;
     private String newName() {
         return nodePrefix + "_" + Integer.toString(nodeCounter++);
     }
@@ -67,9 +66,8 @@ public class MqttEvaluationStrategy implements EvaluationStrategy {
     /**
      * Evaluation
      */
-
     private void execute(Queue<StreamTask> tasks) {
-        Queue<MqttTask> wrappers = new LinkedList<>(tasks.stream().map(t -> new MqttTask(t, broker, newName())).collect(Collectors.toList()));
+        Queue<MqttTask> wrappers = new LinkedList<>(tasks.stream().map(t -> new MqttTask(t, broker.toString(), newName())).collect(Collectors.toList()));
         executor.submit(wrappers);
     }
 
@@ -79,9 +77,13 @@ public class MqttEvaluationStrategy implements EvaluationStrategy {
         MqttGraph graph = new MqttGraph(flow, this::newTopic);
         Queue<StreamTask> tasks = new LinkedList<>();
 
+        // Add task to setup broker
+        if (!(broker.getIp().equals("m2m.eclipse.org")))
+            executor.executeOn(new MqttBrokerTask(broker), broker.getIp());
+
         // Run output node first
         MqttTopic result = newTopic();
-        tasks.add(new StreamTask(evaluationStrategy, Stream.from(result), output, Collections.singletonList("Mqtt")));
+        tasks.add(new StreamTask(evaluationStrategy, Stream.from(result), output, new ArrayList<>()));
 
         // Then run each graph vertex as an individual node (reverse BFS)
         Set<MqttNode> checked = new HashSet<>();
@@ -130,7 +132,7 @@ public class MqttEvaluationStrategy implements EvaluationStrategy {
             Output outputToExecute = (list.size() == 1) ? list.get(0) : new MultipleOutput(list);
 
             // Schedule for execution
-            tasks.add(new StreamTask(evaluationStrategy, new Stream(innerGraph), outputToExecute, Collections.singletonList("Mqtt")));
+            tasks.add(new StreamTask(evaluationStrategy, new Stream(innerGraph), outputToExecute, new ArrayList<>()));
 
             checked.add(toExecute);
         }

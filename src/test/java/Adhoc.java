@@ -1,6 +1,6 @@
 import mqtt_eval.MqttEvaluationStrategy;
 import org.junit.Test;
-import org.reactive_ros.Stream;
+import org.rhea_core.Stream;
 import remote_execution.Broker;
 import rx_eval.RxjavaEvaluationStrategy;
 import test_data.utilities.Threads;

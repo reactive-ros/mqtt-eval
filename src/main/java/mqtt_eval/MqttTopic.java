@@ -1,24 +1,24 @@
 package mqtt_eval;
 
 import org.eclipse.paho.client.mqttv3.*;
-import org.reactive_ros.evaluation.GeneralSerializer;
-import org.reactive_ros.internal.notifications.Notification;
-import org.reactive_ros.io.AbstractTopic;
+import org.rhea_core.evaluation.GeneralSerializer;
+import org.rhea_core.internal.notifications.Notification;
+import org.rhea_core.io.AbstractTopic;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-public class MqttTopic<T> extends AbstractTopic<T, byte[]> {
+public class MqttTopic<T> extends AbstractTopic<T, byte[], MqttAsyncClient> {
     static final boolean DEBUG = false;
     static final int QOS = 2; // slowest && most reliable
-    private MqttAsyncClient client;
 
     public MqttTopic(String name) {
         super(name, new GeneralSerializer());
         this.name = name;
     }
 
-    public void setClient(Object client) {
-        this.client = (MqttAsyncClient) client;
+    @Override
+    public void setClient(MqttAsyncClient client) {
+        this.client = client;
     }
 
     @Override

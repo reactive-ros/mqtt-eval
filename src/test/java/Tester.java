@@ -2,7 +2,9 @@ import mqtt_eval.MqttEvaluationStrategy;
 import org.junit.Test;
 import org.reactive_ros.Stream;
 import rx_eval.RxjavaEvaluationStrategy;
-import test_data.utilities.Threads;
+import test_data.TestData;
+import test_data.TestInfo;
+import test_data.utilities.Colors;
 
 /**
  * @author Orestis Melkonian
@@ -11,10 +13,16 @@ public class Tester {
 
     @Test
     public void mqtt_eval() {
-        Stream.setEvaluationStrategy(new MqttEvaluationStrategy(() -> new RxjavaEvaluationStrategy()));
+        Stream.setEvaluationStrategy(new MqttEvaluationStrategy(RxjavaEvaluationStrategy::new));
 
-        Stream.range(1, 100).subscribe(i -> System.out.println(i));
-
-        Threads.sleep();
+        for (TestInfo test : TestData.tests()) {
+            System.out.print(test.name + ": ");
+            if (test.equality())
+                Colors.print(Colors.GREEN, "Passed");
+            else {
+                Colors.print(Colors.RED, "Failed");
+                System.out.println(test.q1 + " != " + test.q2);
+            }
+        }
     }
 }

@@ -32,13 +32,18 @@ public class MqttEvaluationStrategy implements EvaluationStrategy {
 
     final RemoteExecution executor = new RemoteExecution(); // TODO add machines
     Func0<EvaluationStrategy> evaluationStrategy;
-    Broker broker = new Broker("m2m.eclipse.org", 1883); // default public broker from Eclipse
+    Broker broker // default public broker from Eclipse
+            = new Broker("m2m.eclipse.org", 1883);
+//            = new Broker("http://orestis-B85M-HD3", 1884);
+    boolean brokerSet = true;
+
 
     /**
      * Constructors
      */
     public MqttEvaluationStrategy(Func0<EvaluationStrategy> evaluationStrategy) {
         this.evaluationStrategy = evaluationStrategy;
+        this.brokerSet = false;
     }
 
     public MqttEvaluationStrategy(Func0<EvaluationStrategy> evaluationStrategy, Broker broker) {
@@ -78,7 +83,7 @@ public class MqttEvaluationStrategy implements EvaluationStrategy {
         Queue<StreamTask> tasks = new LinkedList<>();
 
         // Add task to setup broker
-        if (!(broker.getIp().equals("m2m.eclipse.org")))
+        if (brokerSet)
             executor.executeOn(new MqttBrokerTask(broker), broker.getIp());
 
         // Run output node first

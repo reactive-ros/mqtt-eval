@@ -1,4 +1,8 @@
+import mqtt_eval.MqttEvaluationStrategy;
 import org.junit.Test;
+import org.reactive_ros.Stream;
+import remote_execution.Broker;
+import rx_eval.RxjavaEvaluationStrategy;
 import test_data.utilities.Threads;
 
 /**
@@ -8,8 +12,11 @@ public class Adhoc {
 
     @Test
     public void mqtt() {
+        Stream.setEvaluationStrategy(new MqttEvaluationStrategy(RxjavaEvaluationStrategy::new));
+
+        Stream.range(1, 100).subscribe(i -> System.out.println(i));
+
         Threads.sleep();
     }
-
 
 }

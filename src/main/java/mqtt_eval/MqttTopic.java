@@ -1,14 +1,20 @@
 package mqtt_eval;
 
 import org.eclipse.paho.client.mqttv3.*;
+import org.rhea_core.Stream;
 import org.rhea_core.evaluation.GeneralSerializer;
 import org.rhea_core.internal.notifications.Notification;
+import org.rhea_core.internal.output.Output;
 import org.rhea_core.io.AbstractTopic;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MqttTopic<T> extends AbstractTopic<T, byte[], MqttAsyncClient> {
     static final boolean DEBUG = false;
+    static final long DELAY = 250;
     static final int QOS = 2; // slowest && most reliable
 
     public MqttTopic(String name) {
@@ -65,7 +71,7 @@ public class MqttTopic<T> extends AbstractTopic<T, byte[], MqttAsyncClient> {
     @Override
     public void onNext(T t) {
         Notification<T> notification = Notification.createOnNext(t);
-        if (DEBUG) System.out.println(name() + ": Send\t" + notification.getValue());
+//        if (DEBUG) System.out.println(name() + ": Send\t" + notification.getValue());
         publish(client, notification);
     }
 
@@ -76,7 +82,7 @@ public class MqttTopic<T> extends AbstractTopic<T, byte[], MqttAsyncClient> {
 
     @Override
     public void onComplete() {
-        if (DEBUG) System.out.println(name() + ": Send\tComplete");
+//        if (DEBUG) System.out.println(name() + ": Send\tComplete");
         publish(client, Notification.createOnCompleted());
     }
 
@@ -89,10 +95,28 @@ public class MqttTopic<T> extends AbstractTopic<T, byte[], MqttAsyncClient> {
         } catch (MqttException e) {
             e.printStackTrace();
         }
+
+        try {
+            Thread.sleep(DELAY);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public MqttTopic clone() {
         return new MqttTopic(name);
+    }
+
+    public static List<MqttTopic> extract(Stream stream, Output output) {
+        List<MqttTopic> topics = new ArrayList<>();
+
+        for (AbstractTopic topic : AbstractTopic.extractAll(stream, output))
+            if (topic instanceof MqttTopic)
+                topics.add(((MqttTopic) topic));
+            else
+                throw new RuntimeException("Unknown AbstractTopic.");
+
+        return topics;
     }
 }

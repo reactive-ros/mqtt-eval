@@ -5,12 +5,10 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.rhea_core.Stream;
 import org.rhea_core.evaluation.EvaluationStrategy;
 import org.rhea_core.internal.output.Output;
-import org.rhea_core.io.AbstractTopic;
 import org.rhea_core.util.functions.Func0;
 import remote_execution.StreamTask;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @author Orestis Melkonian
@@ -31,15 +29,14 @@ public class MqttTask extends StreamTask {
 
     @Override
     public void run() {
+//        System.out.println(this);
         try {
             final MqttAsyncClient client = new MqttAsyncClient(broker, name, new MemoryPersistence());
             MqttConnectOptions options = new MqttConnectOptions();
             options.setCleanSession(true);
             client.connect(options).waitForCompletion();
 
-            List<MqttTopic> topics = AbstractTopic.extract(stream, output).stream().map(t -> ((MqttTopic) t)).collect(Collectors.toList());
-
-            for (MqttTopic topic : topics) {
+            for (MqttTopic topic : MqttTopic.extract(stream, output)) {
                 client.subscribe(topic.getName(), 2).waitForCompletion();
                 topic.setClient(client);
             }

@@ -25,7 +25,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * // TODO add initial task for setting up broker
  * @author Orestis Melkonian
  */
 public class MqttEvaluationStrategy implements EvaluationStrategy {
@@ -33,10 +32,11 @@ public class MqttEvaluationStrategy implements EvaluationStrategy {
     final RemoteExecution executor = new RemoteExecution(); // TODO add machines
     Func0<EvaluationStrategy> evaluationStrategy;
     Broker broker // default public broker from Eclipse
-            = new Broker("m2m.eclipse.org", 1883);
-//            = new Broker("http://orestis-B85M-HD3", 1884);
+//            = new Broker("m2m.eclipse.org", 1883);
+//            = new Broker("tcp://178.128.109.227", 1884);
+            = new Broker("localhost", 1884);
+//            = new Broker("tcp://orestis-desktop", 1884);
     boolean brokerSet = true;
-
 
     /**
      * Constructors
@@ -59,7 +59,7 @@ public class MqttEvaluationStrategy implements EvaluationStrategy {
     /**
      * Generators
      */
-    String nodePrefix = "~";
+    String nodePrefix = "t";
     int topicCounter = 0, nodeCounter = 0;
     private String newName() {
         return nodePrefix + "_" + Integer.toString(nodeCounter++);

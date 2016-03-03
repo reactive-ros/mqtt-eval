@@ -6,7 +6,7 @@ import org.rhea_core.Stream;
 import org.rhea_core.evaluation.EvaluationStrategy;
 import org.rhea_core.internal.output.Output;
 import org.rhea_core.util.functions.Func0;
-import remote_execution.StreamTask;
+import org.rhea_core.distribution.StreamTask;
 
 import java.util.List;
 

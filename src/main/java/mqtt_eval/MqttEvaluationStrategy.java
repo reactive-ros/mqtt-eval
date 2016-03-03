@@ -16,9 +16,9 @@ import org.rhea_core.internal.output.MultipleOutput;
 import org.rhea_core.internal.output.Output;
 import org.rhea_core.internal.output.SinkOutput;
 import org.rhea_core.util.functions.Func0;
-import remote_execution.Broker;
-import remote_execution.RemoteExecution;
-import remote_execution.StreamTask;
+import org.rhea_core.distribution.Broker;
+import org.rhea_core.distribution.Distributor;
+import org.rhea_core.distribution.StreamTask;
 
 import java.util.*;
 import java.util.function.Function;
@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
  */
 public class MqttEvaluationStrategy implements EvaluationStrategy {
 
-    final RemoteExecution executor = new RemoteExecution(); // TODO add machines
+    final Distributor executor = new Distributor(); // TODO add machines
     Func0<EvaluationStrategy> evaluationStrategy;
     Broker broker // default public broker from Eclipse
 //            = new Broker("m2m.eclipse.org", 1883);

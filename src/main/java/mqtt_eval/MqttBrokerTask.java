@@ -1,7 +1,7 @@
 package mqtt_eval;
 
-import remote_execution.Broker;
-import remote_execution.BrokerTask;
+import org.rhea_core.distribution.Broker;
+import org.rhea_core.distribution.BrokerTask;
 
 /**
  * @author Orestis Melkonian

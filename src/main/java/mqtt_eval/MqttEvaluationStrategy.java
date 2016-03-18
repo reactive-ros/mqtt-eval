@@ -1,148 +1,52 @@
 package mqtt_eval;
 
-import mqtt_eval.mqqt_graph.MqttEdge;
-import mqtt_eval.mqqt_graph.MqttGraph;
-import mqtt_eval.mqqt_graph.MqttNode;
-import org.jgrapht.traverse.BreadthFirstIterator;
+import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.rhea_core.Stream;
 import org.rhea_core.evaluation.EvaluationStrategy;
-import org.rhea_core.internal.expressions.MultipleInputExpr;
-import org.rhea_core.internal.expressions.NoInputExpr;
-import org.rhea_core.internal.expressions.SingleInputExpr;
-import org.rhea_core.internal.expressions.Transformer;
-import org.rhea_core.internal.expressions.creation.FromSource;
-import org.rhea_core.internal.graph.FlowGraph;
-import org.rhea_core.internal.output.MultipleOutput;
 import org.rhea_core.internal.output.Output;
-import org.rhea_core.internal.output.SinkOutput;
-import org.rhea_core.util.functions.Func0;
-import org.rhea_core.distribution.Broker;
-import org.rhea_core.distribution.Distributor;
-import org.rhea_core.distribution.StreamTask;
-
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * @author Orestis Melkonian
  */
 public class MqttEvaluationStrategy implements EvaluationStrategy {
 
-    final Distributor executor = new Distributor(); // TODO add machines
-    Func0<EvaluationStrategy> evaluationStrategy;
-    Broker broker // default public broker from Eclipse
-//            = new Broker("m2m.eclipse.org", 1883);
-//            = new Broker("tcp://178.128.109.227", 1884);
-            = new Broker("localhost", 1884);
-//            = new Broker("tcp://orestis-desktop", 1884);
-    boolean brokerSet = true;
+    EvaluationStrategy innerStrategy;
+    String broker;
+    String clientName;
 
-    /**
-     * Constructors
-     */
-    public MqttEvaluationStrategy(Func0<EvaluationStrategy> evaluationStrategy) {
-        this.evaluationStrategy = evaluationStrategy;
-        this.brokerSet = false;
+    public MqttEvaluationStrategy(EvaluationStrategy innerStrategy, String clientName) {
+        this.innerStrategy = innerStrategy;
+        this.broker = "tcp://m2m.eclipse.org:1883"; // default broker
+        this.clientName = clientName;
     }
 
-    public MqttEvaluationStrategy(Func0<EvaluationStrategy> evaluationStrategy, Broker broker) {
-        this.evaluationStrategy = evaluationStrategy;
+    public MqttEvaluationStrategy(EvaluationStrategy innerStrategy, String broker, String clientName) {
+        this.innerStrategy = innerStrategy;
         this.broker = broker;
-    }
-
-    public MqttEvaluationStrategy(Func0<EvaluationStrategy> evaluationStrategy, Broker broker, String nodePrefix) {
-        this(evaluationStrategy, broker);
-        this.nodePrefix = nodePrefix;
-    }
-
-    /**
-     * Generators
-     */
-    String nodePrefix = "t";
-    int topicCounter = 0, nodeCounter = 0;
-    private String newName() {
-        return nodePrefix + "_" + Integer.toString(nodeCounter++);
-    }
-    public MqttTopic newTopic() {
-        return new MqttTopic(nodePrefix + "/" + Integer.toString(topicCounter++));
-    }
-
-    /**
-     * Evaluation
-     */
-    private void execute(Queue<StreamTask> tasks) {
-        Queue<MqttTask> wrappers = new LinkedList<>(tasks.stream().map(t -> new MqttTask(t, broker.toString(), newName())).collect(Collectors.toList()));
-        executor.submit(wrappers);
+        this.clientName = clientName;
     }
 
     @Override
     public <T> void evaluate(Stream<T> stream, Output output) {
-        FlowGraph flow = stream.getGraph();
-        MqttGraph graph = new MqttGraph(flow, this::newTopic);
-        Queue<StreamTask> tasks = new LinkedList<>();
+        // Set client
+        try {
+            final MqttAsyncClient client = new MqttAsyncClient(broker, clientName, new MemoryPersistence());
+            MqttConnectOptions options = new MqttConnectOptions();
+            options.setCleanSession(true);
+            client.connect(options).waitForCompletion();
 
-        // Add task to setup broker
-        if (brokerSet)
-            executor.executeOn(new MqttBrokerTask(broker), broker.getIp());
-
-        // Run output node first
-        MqttTopic result = newTopic();
-        tasks.add(new StreamTask(evaluationStrategy, Stream.from(result), output, new ArrayList<>()));
-
-        // Then run each graph vertex as an individual node (reverse BFS)
-        Set<MqttNode> checked = new HashSet<>();
-        Stack<MqttNode> stack = new Stack<>();
-        for (MqttNode root : graph.getRoots())
-            new BreadthFirstIterator<>(graph, root).forEachRemaining(stack::push);
-        while (!stack.empty()) {
-            MqttNode toExecute = stack.pop();
-            if (checked.contains(toExecute)) continue;
-
-            Set<MqttEdge> inputs = graph.incomingEdgesOf(toExecute);
-            Transformer transformer = toExecute.getTransformer();
-
-            FlowGraph innerGraph = new FlowGraph();
-            if (transformer instanceof NoInputExpr) {
-                assert inputs.size() == 0;
-                // 0 input
-                innerGraph.addConnectVertex(transformer);
-            } else if (transformer instanceof SingleInputExpr) {
-                assert inputs.size() == 1;
-                // 1 input
-                MqttTopic input = inputs.iterator().next().getTopic();
-                Transformer toAdd = new FromSource<>(input.clone());
-                innerGraph.addConnectVertex(toAdd);
-                innerGraph.attach(transformer);
-            } else if (transformer instanceof MultipleInputExpr) {
-                assert inputs.size() > 1;
-                // N inputs
-                innerGraph.setConnectNodes(inputs.stream()
-                        .map(edge -> new FromSource(edge.getTopic().clone()))
-                        .collect(Collectors.toList()));
-                innerGraph.attachMulti(transformer);
+            for (MqttTopic topic : MqttTopic.extract(stream, output)) {
+                client.subscribe(topic.getName(), 2).waitForCompletion();
+                topic.setClient(client);
             }
-
-            // Set outputs according to graph connections
-            Set<MqttEdge> outputs = graph.outgoingEdgesOf(toExecute);
-            List<Output> list = new ArrayList<>();
-            if (transformer == graph.toConnect)
-                list.add(new SinkOutput<>(result.clone()));
-            list.addAll(outputs.stream()
-                    .map(MqttEdge::getTopic)
-                    .map((Function<MqttTopic, SinkOutput<Object>>) (sink) -> {
-                        return new SinkOutput(sink);
-                    })
-                    .collect(Collectors.toList()));
-            Output outputToExecute = (list.size() == 1) ? list.get(0) : new MultipleOutput(list);
-
-            // Schedule for execution
-            tasks.add(new StreamTask(evaluationStrategy, new Stream(innerGraph), outputToExecute, new ArrayList<>()));
-
-            checked.add(toExecute);
+        } catch (MqttException e) {
+            e.printStackTrace();
         }
 
-        // Submit the tasks for execution
-        execute(tasks);
+        // Propagate evaluation to first-order strategy
+        innerStrategy.evaluate(stream, output);
     }
 }

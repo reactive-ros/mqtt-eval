@@ -2,7 +2,7 @@ package mqtt_eval;
 
 import org.eclipse.paho.client.mqttv3.*;
 import org.rhea_core.Stream;
-import org.rhea_core.evaluation.GeneralSerializer;
+import org.rhea_core.evaluation.DefaultSerializer;
 import org.rhea_core.internal.notifications.Notification;
 import org.rhea_core.internal.output.Output;
 import org.rhea_core.io.AbstractTopic;
@@ -18,7 +18,7 @@ public class MqttTopic<T> extends AbstractTopic<T, byte[], MqttAsyncClient> {
     static final int QOS = 2; // slowest && most reliable
 
     public MqttTopic(String name) {
-        super(name, new GeneralSerializer());
+        super(name, new DefaultSerializer());
         this.name = name;
     }
 
@@ -71,7 +71,7 @@ public class MqttTopic<T> extends AbstractTopic<T, byte[], MqttAsyncClient> {
     @Override
     public void onNext(T t) {
         Notification<T> notification = Notification.createOnNext(t);
-//        if (DEBUG) System.out.println(name() + ": Send\t" + notification.getValue());
+//        if (DEBUG) System.out.println(name() + ": Send\t" + t);
         publish(client, notification);
     }
 

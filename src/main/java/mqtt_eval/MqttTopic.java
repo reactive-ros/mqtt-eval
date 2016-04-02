@@ -2,12 +2,12 @@ package mqtt_eval;
 
 import org.eclipse.paho.client.mqttv3.*;
 import org.rhea_core.Stream;
-import org.rhea_core.evaluation.DefaultSerializer;
-import org.rhea_core.internal.notifications.Notification;
+import org.rhea_core.internal.Notification;
 import org.rhea_core.internal.output.Output;
 import org.rhea_core.io.AbstractTopic;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.rhea_core.serialization.DefaultSerializer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -114,8 +114,6 @@ public class MqttTopic<T> extends AbstractTopic<T, byte[], MqttAsyncClient> {
         for (AbstractTopic topic : AbstractTopic.extractAll(stream, output))
             if (topic instanceof MqttTopic)
                 topics.add(((MqttTopic) topic));
-            else
-                throw new RuntimeException("Unknown AbstractTopic.");
 
         return topics;
     }

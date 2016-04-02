@@ -5,12 +5,14 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.rhea_core.Stream;
+import org.rhea_core.annotations.StrategyInfo;
 import org.rhea_core.evaluation.EvaluationStrategy;
 import org.rhea_core.internal.output.Output;
 
 /**
  * @author Orestis Melkonian
  */
+@StrategyInfo(name = "mqtt", requiredSkills = {"Mqtt"}, priority = 1)
 public class MqttEvaluationStrategy implements EvaluationStrategy {
 
     EvaluationStrategy innerStrategy;

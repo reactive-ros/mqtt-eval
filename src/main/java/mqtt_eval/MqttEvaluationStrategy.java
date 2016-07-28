@@ -16,36 +16,44 @@ import org.rhea_core.internal.output.Output;
 public class MqttEvaluationStrategy implements EvaluationStrategy {
 
     EvaluationStrategy innerStrategy;
-    String broker;
-    String clientName;
+    MqttAsyncClient client;
+
 
     public MqttEvaluationStrategy(EvaluationStrategy innerStrategy, String clientName) {
-        this.innerStrategy = innerStrategy;
-        this.broker = "tcp://m2m.eclipse.org:1883"; // default broker
-        this.clientName = clientName;
+        this(innerStrategy, "tcp://m2m.eclipse.org:1883", clientName); // default broker
     }
 
     public MqttEvaluationStrategy(EvaluationStrategy innerStrategy, String broker, String clientName) {
         this.innerStrategy = innerStrategy;
-        this.broker = broker;
-        this.clientName = clientName;
+        try {
+            client = new MqttAsyncClient(broker, clientName, new MemoryPersistence());
+            MqttConnectOptions options = new MqttConnectOptions();
+            options.setCleanSession(true);
+            client.connect(options).waitForCompletion();
+        } catch (MqttException e) {
+            e.printStackTrace();
+            client = null;
+        }
     }
 
     @Override
     public <T> void evaluate(Stream<T> stream, Output output) {
         // Set client
-        try {
-            final MqttAsyncClient client = new MqttAsyncClient(broker, clientName, new MemoryPersistence());
-            MqttConnectOptions options = new MqttConnectOptions();
-            options.setCleanSession(true);
-            client.connect(options).waitForCompletion();
-
-            for (MqttTopic topic : MqttTopic.extract(stream, output)) {
+        for (MqttTopic topic : MqttTopic.extract(stream, output)) {
+            try {
                 client.subscribe(topic.getName(), 2).waitForCompletion();
-                topic.setClient(client);
+            } catch (MqttException e) {
+                e.printStackTrace();
             }
-        } catch (MqttException e) {
-            e.printStackTrace();
+            topic.setClient(client);
+        }
+        for (MqttInternalTopic topic : MqttInternalTopic.extract(stream, output)) {
+            try {
+                client.subscribe(topic.getName(), 2).waitForCompletion();
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+            topic.setClient(client);
         }
 
         // Propagate evaluation to first-order strategy

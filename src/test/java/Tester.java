@@ -1,6 +1,7 @@
-import mqtt_eval.MqttEvaluationStrategy;
 import org.junit.Test;
 import org.rhea_core.Stream;
+
+import mqtt_eval.MqttEvaluationStrategy;
 import rx_eval.RxjavaEvaluationStrategy;
 import test_data.TestData;
 import test_data.TestInfo;
@@ -13,20 +14,15 @@ public class Tester {
 
     @Test
     public void mqtt_eval() {
-//        Stream.setEvaluationStrategy(new MqttEvaluationStrategy(RxjavaEvaluationStrategy::new));
+        Stream.evaluationStrategy =
+                new MqttEvaluationStrategy(new RxjavaEvaluationStrategy(), "myclientname");
 
         for (TestInfo test : TestData.tests()) {
-//            System.out.print(test.name + ": ");
-            String name = test.name;
-            Stream<Integer> s1 = test.s1;
-            Stream<Integer> s2 = test.s2;
-            Stream.sequenceEqual(s1, s2).subscribe(i -> {
-                if (i)
-                    Colors.println(Colors.GREEN, name + ": pass");
-                else
-                    Colors.println(Colors.RED, name + ": fail");
-            });
-
+            System.out.print(test.name + ": ");
+            if (test.equality())
+                Colors.println(Colors.GREEN, "pass");
+            else
+                Colors.println(Colors.RED, "fail");
         }
     }
 }

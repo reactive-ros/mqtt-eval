@@ -2,6 +2,7 @@ package mqtt_eval;
 
 import org.eclipse.paho.client.mqttv3.*;
 import org.rhea_core.Stream;
+import org.rhea_core.internal.Notification;
 import org.rhea_core.internal.output.Output;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -24,6 +25,9 @@ public class MqttTopic extends ExternalTopic<byte[], MqttAsyncClient> {
         this.client = client;
     }
 
+    /**
+     * Publisher implementation.
+     */
     @Override
     public void subscribe(Subscriber<? super byte[]> s) {
         client.setCallback(new MqttCallback() {
@@ -42,6 +46,9 @@ public class MqttTopic extends ExternalTopic<byte[], MqttAsyncClient> {
         });
     }
 
+    /**
+     * Subscriber implementation.
+     */
     @Override
     public void onSubscribe(Subscription s) {
         s.request(1);
